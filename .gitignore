@@ -1,0 +1,41 @@
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# Virtual Environments
+.venv/
+venv/
+env/
+ENV/
+
+# Large Datasets & Raw Images (1.5GB / 112,000+ files)
+dataset/
+*.zip
+*.tar.gz
+*.gz
+*.7z
+
+# Model weights exceeding GitHub 100MB limit
+models/resnet_*.keras
+*.h5
+*.pth
+*.pt
+
+# Keep lightweight autoencoder weights (< 4MB)
+!models/autoencoder.keras
+
+# Environment & Secrets
+.env
+*.env
+*.pem
+*.key
+
+# IDE / OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+ex.html

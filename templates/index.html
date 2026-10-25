@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Structural Crack Detection</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #13131a;
+      --border: #1e1e2e;
+      --accent: #00ff88;
+      --accent2: #ff4444;
+      --text: #e8e8f0;
+      --muted: #666680;
+      --card: #16161f;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header */
+    header {
+      padding: 40px 0 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo {
+      width: 44px;
+      height: 44px;
+      background: var(--accent);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Space Mono', monospace;
+      font-weight: 700;
+      color: var(--bg);
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .header-text h1 {
+      font-family: 'Space Mono', monospace;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.5px;
+    }
+
+    .header-text p {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .badge {
+      margin-left: auto;
+      background: rgba(0,255,136,0.1);
+      border: 1px solid rgba(0,255,136,0.3);
+      color: var(--accent);
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    /* Stats bar */
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      padding: 24px 0;
+    }
+
+    .stat {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-family: 'Space Mono', monospace;
+    }
+
+    .stat-value {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--accent);
+      font-family: 'Space Mono', monospace;
+      margin-top: 4px;
+    }
+
+    .stat-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* Main layout */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      padding-bottom: 40px;
+    }
+
+    /* Upload panel */
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .panel-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    .panel-title {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+    }
+
+    .panel-body {
+      padding: 20px;
+    }
+
+    /* Upload zone */
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(0,255,136,0.03);
+    }
+
+    .upload-zone input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .upload-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+    }
+
+    .upload-text {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .upload-text span {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    /* Preview */
+    #preview-container {
+      display: none;
+      margin-top: 16px;
+    }
+
+    #preview-img {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    /* Analyze button */
+    .btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      border-radius: 10px;
+      font-family: 'Space Mono', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 16px;
+      letter-spacing: 1px;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    /* Loading spinner */
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--bg);
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Results panel */
+    #result-panel { display: none; }
+
+    /* Result verdict */
+    .verdict {
+      text-align: center;
+      padding: 24px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+
+    .verdict.crack {
+      background: rgba(255,68,68,0.08);
+      border: 1px solid rgba(255,68,68,0.3);
+    }
+
+    .verdict.no-crack {
+      background: rgba(0,255,136,0.08);
+      border: 1px solid rgba(0,255,136,0.3);
+    }
+
+    .verdict-icon { font-size: 36px; margin-bottom: 8px; }
+
+    .verdict-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .verdict.crack .verdict-label { color: var(--accent2); }
+    .verdict.no-crack .verdict-label { color: var(--accent); }
+
+    .verdict-conf {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    /* Confidence bar */
+    .conf-bar-wrap {
+      margin-top: 12px;
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .conf-bar {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.8s ease;
+    }
+
+    .crack .conf-bar { background: var(--accent2); }
+    .no-crack .conf-bar { background: var(--accent); }
+
+    /* Image triplet */
+    .img-triplet {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .img-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .img-card img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      display: block;
+    }
+
+    .img-card-label {
+      padding: 6px 10px;
+      font-size: 10px;
+      font-family: 'Space Mono', monospace;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      text-align: center;
+    }
+
+    /* Pipeline info */
+    .pipeline {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    .pip-step {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 10px;
+      font-family: 'Space Mono', monospace;
+      color: var(--muted);
+    }
+
+    .pip-arrow {
+      color: var(--accent);
+      font-size: 12px;
+    }
+
+    /* Error */
+    .error-msg {
+      background: rgba(255,68,68,0.08);
+      border: 1px solid rgba(255,68,68,0.3);
+      color: var(--accent2);
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      margin-top: 12px;
+      display: none;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 20px 0;
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+    }
+
+    @media (max-width: 768px) {
+      .main-grid { grid-template-columns: 1fr; }
+      .stats-bar { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Header -->
+  <header>
+    <div class="header-inner">
+      <div class="logo">CD</div>
+      <div class="header-text">
+        <h1>CrackDetect AI</h1>
+        <p>Structural Health Monitoring System</p>
+      </div>
+      <div class="badge">RESNET50 + AE</div>
+    </div>
+  </header>
+
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat">
+      <div class="stat-label">Baseline Accuracy</div>
+      <div class="stat-value">93.46%</div>
+      <div class="stat-sub">ResNet50 on clean images</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Pipeline Accuracy</div>
+      <div class="stat-value">94.48%</div>
+      <div class="stat-sub">Denoising AE + ResNet50</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Dataset</div>
+      <div class="stat-value">56K+</div>
+      <div class="stat-sub">SDNET2018 images</div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main-grid">
+
+    <!-- Upload Panel -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-dot"></div>
+        <span class="panel-title">Upload Image</span>
+      </div>
+      <div class="panel-body">
+        <div class="upload-zone" id="drop-zone">
+          <input type="file" id="file-input" accept="image/*"/>
+          <div class="upload-icon">🏗️</div>
+          <div class="upload-text">
+            <span>Click to upload</span> or drag & drop<br>
+            JPG, PNG, BMP supported
+          </div>
+        </div>
+
+        <div id="preview-container">
+          <img id="preview-img" src="" alt="Preview"/>
+        </div>
+
+        <button class="btn" id="analyze-btn" disabled>
+          <span class="spinner" id="spinner"></span>
+          <span id="btn-text">ANALYZE IMAGE</span>
+        </button>
+
+        <div class="error-msg" id="error-msg"></div>
+
+        <!-- Pipeline steps -->
+        <div class="pipeline">
+          <div class="pip-step">Input</div>
+          <div class="pip-arrow">→</div>
+          <div class="pip-step">Noise Add</div>
+          <div class="pip-arrow">→</div>
+          <div class="pip-step">Autoencoder</div>
+          <div class="pip-arrow">→</div>
+          <div class="pip-step">ResNet50</div>
+          <div class="pip-arrow">→</div>
+          <div class="pip-step">Output</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Result Panel -->
+    <div class="panel" id="result-panel">
+      <div class="panel-header">
+        <div class="panel-dot" id="result-dot"></div>
+        <span class="panel-title">Detection Result</span>
+      </div>
+      <div class="panel-body">
+
+        <div class="verdict" id="verdict-box">
+          <div class="verdict-icon" id="verdict-icon"></div>
+          <div class="verdict-label" id="verdict-label"></div>
+          <div class="verdict-conf" id="verdict-conf"></div>
+          <div class="conf-bar-wrap">
+            <div class="conf-bar" id="conf-bar" style="width:0%"></div>
+          </div>
+        </div>
+
+        <div style="font-family:'Space Mono',monospace; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">
+          Processing Pipeline
+        </div>
+
+        <div class="img-triplet">
+          <div class="img-card">
+            <img id="orig-img" src="" alt="Original"/>
+            <div class="img-card-label">Original</div>
+          </div>
+          <div class="img-card">
+            <img id="noisy-img" src="" alt="Noisy"/>
+            <div class="img-card-label">Noisy</div>
+          </div>
+          <div class="img-card">
+            <img id="denoised-img" src="" alt="Denoised"/>
+            <div class="img-card-label">Denoised</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    Structural Crack Detection System &nbsp;·&nbsp; SDNET2018 Dataset &nbsp;·&nbsp; ResNet50 + Denoising Autoencoder
+  </footer>
+
+</div>
+
+<script>
+  const fileInput  = document.getElementById('file-input');
+  const dropZone   = document.getElementById('drop-zone');
+  const previewImg = document.getElementById('preview-img');
+  const previewCon = document.getElementById('preview-container');
+  const analyzeBtn = document.getElementById('analyze-btn');
+  const spinner    = document.getElementById('spinner');
+  const btnText    = document.getElementById('btn-text');
+  const errorMsg   = document.getElementById('error-msg');
+  const resultPanel= document.getElementById('result-panel');
+
+  let selectedFile = null;
+
+  // Drag & drop
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) handleFile(fileInput.files[0]);
+  });
+
+  function handleFile(file) {
+    selectedFile = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+      previewImg.src = e.target.result;
+      previewCon.style.display = 'block';
+      analyzeBtn.disabled = false;
+      errorMsg.style.display = 'none';
+      resultPanel.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  analyzeBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+
+    // Loading state
+    spinner.style.display = 'block';
+    btnText.textContent = 'ANALYZING...';
+    analyzeBtn.disabled = true;
+    errorMsg.style.display = 'none';
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    try {
+      const res  = await fetch('/predict', { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (data.error) throw new Error(data.error);
+
+      // Show results
+      showResult(data);
+
+    } catch (err) {
+      errorMsg.textContent = '⚠ ' + err.message;
+      errorMsg.style.display = 'block';
+    } finally {
+      spinner.style.display = 'none';
+      btnText.textContent = 'ANALYZE IMAGE';
+      analyzeBtn.disabled = false;
+    }
+  });
+
+  function showResult(data) {
+    resultPanel.style.display = 'block';
+
+    const verdictBox = document.getElementById('verdict-box');
+    const verdictIcon = document.getElementById('verdict-icon');
+    const verdictLabel = document.getElementById('verdict-label');
+    const verdictConf = document.getElementById('verdict-conf');
+    const confBar = document.getElementById('conf-bar');
+    const resultDot = document.getElementById('result-dot');
+
+    verdictBox.className = 'verdict ' + (data.is_crack ? 'crack' : 'no-crack');
+    verdictIcon.textContent = data.is_crack ? '⚠️' : '✅';
+    verdictLabel.textContent = data.label;
+    verdictConf.textContent = `Confidence: ${data.confidence}%`;
+    resultDot.style.background = data.is_crack ? 'var(--accent2)' : 'var(--accent)';
+
+    // Animate bar
+    setTimeout(() => { confBar.style.width = data.confidence + '%'; }, 100);
+
+    // Images
+    document.getElementById('orig-img').src     = 'data:image/png;base64,' + data.original_img;
+    document.getElementById('noisy-img').src    = 'data:image/png;base64,' + data.noisy_img;
+    document.getElementById('denoised-img').src = 'data:image/png;base64,' + data.denoised_img;
+
+    // Scroll to result
+    resultPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+</script>
+
+</body>
+</html>
